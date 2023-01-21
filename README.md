@@ -1,6 +1,6 @@
 # smsbuddy
 
-A new Flutter application.
+This flutter application gets Contacts from a localy deployed server along with SMS string and can send bulk SMS using the SIM card in phone rather than online services which are unreliable and cannot be replied to.
 
 ## Getting Started
 

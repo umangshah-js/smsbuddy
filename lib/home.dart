@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:sms/sms.dart';
 // import 'package:toast/toast.dart';
 
 class Home extends StatefulWidget {
@@ -19,7 +18,6 @@ class _HomeState extends State<Home> {
   int _total;
   int _simSelected;
   String deviceName;
-  SmsSender sender;
   void initState() {
     super.initState();
 
@@ -27,7 +25,6 @@ class _HomeState extends State<Home> {
     _sent_total_by_me = 0;
     _sent_total = 0;
     _total = 0;
-    sender = new SmsSender();
     // sender.onSmsDelivered.listen((SmsMessage message) {
     //   print('${message.address} received your message from ${message.body}');
     // });

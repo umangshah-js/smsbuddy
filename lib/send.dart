@@ -1,8 +1,13 @@
+import 'dart:io';
+
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sms/sms.dart';
+// import 'package:sms/sms.dart';
+import 'package:sms_maintained/sms.dart';
+import 'package:device_info/device_info.dart';
 
 class SendSMS extends StatefulWidget {
   final Map routeArgs;
@@ -25,6 +30,8 @@ class _SendSMSState extends State<SendSMS> {
   int delivery;
   bool hasSent;
   String deviceName;
+  Map<String, dynamic> _deviceData = <String, dynamic>{};
+  static final DeviceInfoPlugin deviceInfoPlugin = DeviceInfoPlugin();
   @override
   initState() {
     super.initState();
@@ -41,8 +48,29 @@ class _SendSMSState extends State<SendSMS> {
     // sender.onSmsDelivered.listen((SmsMessage message) {
     //   print('${message.address} received your message.');
     // });
-
+    initPlatformState();
     getContacts(smsCount);
+  }
+
+  Future<void> initPlatformState() async {
+    Map<String, dynamic> deviceData;
+
+    try {
+      if (Platform.isAndroid) {
+        deviceData = _readAndroidBuildData(await deviceInfoPlugin.androidInfo);
+      }
+    } on PlatformException {
+      deviceData = <String, dynamic>{
+        'Error:': 'Failed to get platform version.'
+      };
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      _deviceData = deviceData;
+    });
+    print(_deviceData);
   }
 
   Widget contactList() {
@@ -113,6 +141,17 @@ class _SendSMSState extends State<SendSMS> {
     });
   }
 
+  Map<String, dynamic> _readAndroidBuildData(AndroidDeviceInfo build) {
+    return <String, dynamic>{
+      'brand': build.brand,
+      'device': build.device,
+      'display': build.display,
+      'manufacturer': build.manufacturer,
+      'model': build.model,
+      'product': build.product
+    };
+  }
+
   Future<bool> _onBackPressed() {
     Navigator.pushReplacementNamed(context, 'home');
     return new Future.value(false);
@@ -120,11 +159,9 @@ class _SendSMSState extends State<SendSMS> {
 
   send() async {
     var contactsLength = contacts.length;
-    SimCardsProvider provider = new SimCardsProvider();
-    List<SimCard> card = await provider.getSimCards();
-    setState(() {
-      hasSent = true;
-    });
+    // SimCardsProvider provider = new SimCardsProvider();
+    // List<SimCard> card = await provider.getSimCards();
+
     contacts.asMap().forEach((i, contact) {
       print(contact["_id"]);
       //  setState(() {
@@ -144,7 +181,7 @@ class _SendSMSState extends State<SendSMS> {
           });
           var params = {
             "_id": message.address,
-            "status": "delivered",
+            "status": "Delivered",
             "name": deviceName
           };
           http.get(Uri.http("192.168.0.106:5000", '/set_status', params));
@@ -166,7 +203,29 @@ class _SendSMSState extends State<SendSMS> {
           print("SMS sending failed");
         }
       });
-      sender.sendSms(message, simCard: card[simNumber]);
+      try {
+        sleep(Duration(seconds: 1));
+        setState(() {
+          hasSent = true;
+        });
+        if (["ASUS_Z01BDB"].contains(_deviceData["model"])) {
+          sender.sendSms(message);
+        } else {
+          List<SimCard> card = new List<SimCard>(2);
+          card[0] = new SimCard.fromJson(
+              {"imei": "39875938475", "slot": 1, "state": 5});
+          card[1] = new SimCard.fromJson(
+              {"imei": "39875938475", "slot": 2, "state": 5});
+
+          // sender.sendSms(message, simCard: card[simNumber]);
+          sender.sendSms(message);
+        }
+      } catch (ex, trace) {
+        print(ex);
+        print(trace);
+      }
+
+      // sender.sendSms(message);
       var params = {
         "_id": message.address,
         "status": "Sent",
